@@ -1,0 +1,29 @@
+{
+  "name": "koa2-match",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "mocha",
+    "build": "babel src -d  lib",
+    "push": "npm version patch && npm publish"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/laomu1988/koa2-match.git"
+  },
+  "bugs": {
+    "url": "https://github.com/laomu1988/koa2-match/issues"
+  },
+  "author": "laomu1988@qq.com",
+  "dependencies": {
+    "babel-core": "^6.10.4",
+    "babel-polyfill": "^6.9.1",
+    "babel-runtime": "^6.9.1",
+    "lodash": "^4.17.4"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "babel-plugin-transform-runtime": "^6.15.0"
+  }
+}
