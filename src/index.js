@@ -53,7 +53,7 @@ function ctx_plain_change(ctx, plainObject) {
 function callback() {
   return async function (ctx, next) {
     var request_callbacks = [], response_callback = [];
-    rules.forEach((r) => {
+    rules.forEach(function (r) {
       let rule = r.rule, callback = r.callback;
       if (_.isString(rule) || _.isRegExp(rule) || _.isFunction(rule)) {
         rule = {url: rule};
@@ -73,6 +73,7 @@ function callback() {
   }
 }
 
+module.exports.rules = rules;
 module.exports.callback = callback;
 module.exports.match = match;
 module.exports.clean = clean;
