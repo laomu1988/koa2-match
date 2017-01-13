@@ -1,12 +1,12 @@
 {
   "name": "koa2-match",
   "version": "1.0.0",
-  "description": "",
+  "description": "match request or response and change koa2 context.",
   "main": "lib/index.js",
   "scripts": {
     "test": "mocha",
     "build": "babel src -d  lib",
-    "push": "npm version patch && npm publish"
+    "push": "nrm use npm && npm version patch && npm publish && nrm use taobao"
   },
   "repository": {
     "type": "git",
@@ -23,7 +23,6 @@
     "lodash": "^4.17.4"
   },
   "devDependencies": {
-    "babel-core": "^6.1.2",
     "babel-eslint": "^5.0.0",
     "babel-plugin-transform-async-to-generator": "^6.0.14",
     "babel-plugin-transform-runtime": "^6.15.0",
