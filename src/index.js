@@ -5,7 +5,7 @@ require("babel-core/register");
 require("babel-polyfill");
 
 var _ = require('lodash');
-
+var mixin = require('mixin-attr');
 var rules = [];
 /**
  * 增加匹配规则和回调
@@ -19,11 +19,20 @@ function match(rule, callback) {
     rules.push({rule, callback})
   }
 }
+
+function setRules(_rules) {
+  clean();
+  if (_.isArray(_rules)) {
+    _rules.forEach(function (r) {
+      r && r.rule && r.callback && rules.push(r);
+    });
+  }
+}
 /**
  * 清空所有规则 todo:
  * */
-function clean(rule, callback) {
-
+function clean() {
+  rules.splice(0, rules.length);
 }
 
 async function ctx_handle(ctx, handle) {
@@ -38,15 +47,64 @@ async function ctx_handle(ctx, handle) {
     ctx_plain_change(ctx, handle);
   }
 }
-// todo: 直接修改ctx属性
+/**
+ * 直接修改ctx属性
+ * todo:
+ *  {
+ *      'body': 'test',
+ *      'request.header.cookie': ''
+ *      'request': {
+ *          'header': {
+ *              'host': ''
+ *          }
+ *      }
+ *  }
+ */
 function ctx_plain_change(ctx, plainObject) {
-  // for (let attr in plainObject) {
-  //   let attrs = attr.split('.');
-  //   if (attrs.length === 1) {
-  //     ctx.response[attr] = plainObject[attr];
-  //   }
-  // }
+  for (let attr in plainObject) {
+    let val = plainObject[attr];
+    attr = (attr + '').trim().toLowerCase();
+    switch (attr) {
+      case 'url':
+      case 'method':
+        ctx.request[attr] = val;
+        continue;
+      case 'host':
+      case 'hostname':
+      case 'referer':
+      case 'user-agent':
+      case 'accept':
+      case 'accept-encoding':
+      case 'accept-language':
+      case 'accept-control-expose-headers':
+      case 'cache-control':
+      case 'cookie':
+        ctx.request.set(attr, val);
+        continue;
+      case 'body':
+      case 'status':
+        ctx.response[attr] = val;
+        continue;
+    }
+    if (attr.indexOf('.') < 0) {
+      if (typeof ctx[attr] === 'object') {
+        // 当时对象时,不要直接赋值,不然会影响对象上原有的属性
+        mixin(ctx[attr], val);
+      } else {
+        ctx[attr] = val;
+      }
+      continue;
+    }
+    let attrs = attr.split('.');
+    let start = attrs.shift();
+    let end = attrs.join('.');
+    let reset = {};
+    reset[end] = val;
+    mixin(ctx[start], reset);
+  }
 }
+
+
 /**
  * 返回koa中间件
  */
@@ -73,10 +131,14 @@ function callback() {
   }
 }
 
-module.exports.rules = rules;
+
+module.exports.getRules = function () {
+  return rules;
+};
 module.exports.callback = callback;
 module.exports.match = match;
 module.exports.clean = clean;
+module.exports.setRules = setRules;
 
 
 function GetVal(ctx, key) {

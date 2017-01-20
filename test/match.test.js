@@ -2,7 +2,6 @@
 var expect = require('chai').expect;
 var agent = require('supertest').agent;
 var http = require('http');
-
 var app = require('./base');
 agent = agent(http.createServer(app.callback()));
 describe('test match method', function () {
