@@ -1,6 +1,6 @@
 {
   "name": "koa2-match",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "match request or response and change koa2 context.",
   "main": "lib/index.js",
   "scripts": {
