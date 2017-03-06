@@ -21,7 +21,8 @@
     "babel-polyfill": "^6.9.1",
     "babel-runtime": "^6.9.1",
     "lodash": "^4.17.4",
-    "mixin-attr": "^1.0.0"
+    "mixin-attr": "^1.0.0",
+    "uuid": "^3.0.1"
   },
   "devDependencies": {
     "babel-eslint": "^5.0.0",

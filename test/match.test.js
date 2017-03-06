@@ -28,11 +28,49 @@ describe('test match method', function () {
     });
   });
 
+  it('test_plain_mixin', function (done) {
+    agent.get('/test_plain_mixin')
+      .expect(200)
+      .expect('cookie', 'set-cookie')
+      .expect('server1', 'test-server1')
+      .expect('server2', 'test-server2')
+      .end(function (err, res) {
+        expect(res.text === 'test_plain_mixin').to.be.ok;
+        done(err);
+      });
+  });
+
+
   it('test_arr', function (done) {
     agent.get('/test_arr').expect(200).end(function (err, res) {
       expect(res.text === 'test_arr').to.be.ok;
       done(err);
     });
   });
+
+  it('test_promise1', function (done) {
+    agent.get('/test_promise1').expect(200).end(function (err, res) {
+      // console.log('res.text:',res.text);
+      expect(res.text === 'test_promise1').to.be.ok;
+      done(err);
+    });
+  });
+
+  it('test_promise_chain', function (done) {
+    agent.get('/test_promise_chain').expect(200).end(function (err, res) {
+      // console.log('res.text:',res.text);
+      expect(res.text === 'test_promise_chain2.2').to.be.ok;
+      done(err);
+    });
+  });
+
+  it('test_add_later', function (done) {
+    agent.get('/test_add_later').expect(200).end(function (err, res) {
+      console.log('res.text:', res.text);
+      expect(res.text === 'test_add_later').to.be.ok;
+      done(err);
+    });
+  });
+
 
 });

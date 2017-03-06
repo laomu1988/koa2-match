@@ -3,20 +3,31 @@
  * */
 require("babel-core/register");
 require("babel-polyfill");
+var uuid = require('uuid');
 
 var _ = require('lodash');
 var mixin = require('mixin-attr');
-var rules = [];
+const rules = [];
 /**
  * 增加匹配规则和回调
  * */
 function match(rule, callback) {
   if (_.isArray(rule)) {
-    rule.forEach(function (r) {
-      r && r.rule && r.callback && rules.push(r);
-    });
-  } else if (rule && callback) {
-    rules.push({rule, callback})
+    rule.forEach(r => match(r.rule, r.callback));
+  }
+  else if (arguments.length === 1) {
+    callback = rule;
+    rule = /\*/g;
+    rules.push({rule, callback, id: uuid()})
+  }
+  else if (_.isString(rule) || _.isFunction(rule) || _.isRegExp(rule)) {
+    rule = {url: rule};
+    rules.push({rule, callback, id: uuid()})
+  }
+  else if (rule && callback) {
+    rules.push({rule, callback, id: uuid()})
+  } else {
+    console.log('unkonw rule', rule, callback);
   }
 }
 
@@ -24,7 +35,10 @@ function setRules(_rules) {
   clean();
   if (_.isArray(_rules)) {
     _rules.forEach(function (r) {
-      r && r.rule && r.callback && rules.push(r);
+      if (r && r.rule && r.callback) {
+        r.id = r.id || uuid();
+        rules.push(r);
+      }
     });
   }
 }
@@ -41,7 +55,7 @@ async function ctx_handle(ctx, handle) {
     handle.forEach(h => ctx_handle(ctx, h));
   }
   else if (_.isFunction(handle)) {
-    return handle(ctx);
+    return await handle(ctx);
   }
   else if (_.isPlainObject(handle)) {
     ctx_plain_change(ctx, handle);
@@ -88,8 +102,10 @@ function ctx_plain_change(ctx, plainObject) {
     }
     if (attr.indexOf('.') < 0) {
       if (typeof ctx[attr] === 'object') {
-        // 当时对象时,不要直接赋值,不然会影响对象上原有的属性
+        // 当是对象时,不要直接赋值,不然会影响对象上原有的属性
+        // console.log('mixin:', attr, val);
         mixin(ctx[attr], val);
+        // console.log('result:', ctx[attr]);
       } else {
         ctx[attr] = val;
       }
@@ -100,7 +116,13 @@ function ctx_plain_change(ctx, plainObject) {
     let end = attrs.join('.');
     let reset = {};
     reset[end] = val;
-    mixin(ctx[start], reset);
+    if (typeof ctx[start] === 'object') {
+      // console.log('mixin2:', start, reset);
+      mixin(ctx[start], reset);
+      // console.log('result:', ctx[start]);
+    } else {
+      ctx[start] = reset;
+    }
   }
 }
 
@@ -110,25 +132,31 @@ function ctx_plain_change(ctx, plainObject) {
  */
 function callback() {
   return async function (ctx, next) {
-    var request_callbacks = [], response_callback = [];
-    rules.forEach(function (r) {
-      let rule = r.rule, callback = r.callback;
-      if (_.isString(rule) || _.isRegExp(rule) || _.isFunction(rule)) {
-        rule = {url: rule};
-      }
-      for (var key in rule) {
-        if (key === 'phase') continue;
-        var condition = rule[key];
-        if (!TestRule(GetVal(ctx, key), condition)) {
-          return;
-        }
-      }
-      rule.phase === 'response' ? response_callback.push(callback) : request_callbacks.push(callback);
-    });
-    request_callbacks.length > 0 && await ctx_handle(ctx, request_callbacks);
-    await next();
-    response_callback.length > 0 && await ctx_handle(ctx, response_callback);
+    try {
+      await RunRuleHandle(ctx, rules.filter(r => (!r.rule.phase || r.rule.phase === 'request')));
+      await next();
+      await RunRuleHandle(ctx, rules.filter(r => (r.rule.phase === 'response')));
+      // console.log('ctx:', ctx);
+      resetHeader(ctx);
+    }
+    catch (e) {
+      console.log(e);
+    }
   }
+}
+
+
+async function RunRuleHandle(ctx, list, nowIndex) {
+  nowIndex = nowIndex || 0;
+  if (nowIndex >= list.length) return Promise.resolve();
+  var r = list[nowIndex];
+  if (isCtxMatchRule(ctx, r.rule)) {
+    ctx._matchs ? ctx._matchs.push(r.id) : ctx._matchs = [r.id];
+    return await ctx_handle(ctx, r.callback).then(function () {
+      return RunRuleHandle(ctx, list, nowIndex + 1)
+    });
+  }
+  return RunRuleHandle(ctx, list, nowIndex + 1);
 }
 
 
@@ -140,6 +168,17 @@ module.exports.match = match;
 module.exports.clean = clean;
 module.exports.setRules = setRules;
 
+
+function isCtxMatchRule(ctx, rule) {
+  for (var key in rule) {
+    if (key === 'phase') continue;
+    var condition = rule[key];
+    if (!TestOneRule(GetVal(ctx, key), condition)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 function GetVal(ctx, key) {
   switch (key) {
@@ -159,7 +198,7 @@ function GetVal(ctx, key) {
       return ctx.get(key) || ctx[key];
   }
 }
-function TestRule(val, rule) {
+function TestOneRule(val, rule) {
   if (_.isFunction(rule)) {
     return rule(val);
   } else if (_.isRegExp(rule)) {
@@ -168,4 +207,12 @@ function TestRule(val, rule) {
     return (val + '').indexOf(rule) >= 0;
   }
   return false;
+}
+
+// response的header需要重新设置
+function resetHeader(ctx) {
+  var response = ctx.response, header = response.header;
+  for (var attr in header) {
+    ctx.set(attr, header[attr]);
+  }
 }
