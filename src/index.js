@@ -18,7 +18,7 @@ function match (rule, callback) {
     callback = rule
     rule = /\*/g
     rules.push({rule, callback, id: uuid()})
-  } else if (_.isString(rule) || _.isFunction(rule) || _.isRegExp(rule)) {
+  } else if (_.isString(rule) || _.isRegExp(rule)) {
     rule = {url: rule}
     rules.push({rule, callback, id: uuid()})
   } else if (rule && callback) {
@@ -122,8 +122,10 @@ function ctxChangeByPlain (ctx, plainObject) {
 function callback () {
   return async function (ctx, next) {
     try {
+      ctx.phase = 'request'
       await RunRuleHandle(ctx, rules.filter(r => (!r.rule.phase || r.rule.phase === 'request')))
       await next()
+      ctx.phase = 'response'
       await RunRuleHandle(ctx, rules.filter(r => (r.rule.phase === 'response')))
       // console.log('ctx:', ctx);
       resetHeader(ctx)
@@ -156,6 +158,7 @@ module.exports.clean = clean
 module.exports.setRules = setRules
 
 function isCtxMatchRule (ctx, rule) {
+  if (typeof rule === 'function') return rule(ctx)
   for (var key in rule) {
     if (key === 'phase') continue
     var condition = rule[key]

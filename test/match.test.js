@@ -74,4 +74,18 @@ describe('test match method', function () {
       done(err)
     })
   })
+
+  it('test_rule_function', function (done) {
+    app.match(function (ctx) {
+      expect(ctx.request && ctx.response && true).to.be.ok
+      return true
+    }, function (ctx) {
+      ctx.response.body = 'test_rule_function'
+    })
+
+    agent.get('/test_rule_function').expect(200).end(function (err, res) {
+      expect(res.text === 'test_rule_function').to.be.ok
+      done(err)
+    })
+  })
 })

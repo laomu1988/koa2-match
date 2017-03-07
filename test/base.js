@@ -80,4 +80,6 @@ setTimeout(function () {
 
 // app.listen(4000);
 
+app.match = match.match.bind(match)
+
 module.exports = app
