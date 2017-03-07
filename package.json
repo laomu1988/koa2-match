@@ -6,7 +6,7 @@
   "scripts": {
     "test": "standard && mocha",
     "build": "babel src -d  lib",
-    "push": "nrm use npm && npm version patch && npm publish && nrm use taobao"
+    "push": "nrm use npm && npm version patch && npm publish"
   },
   "repository": {
     "type": "git",
