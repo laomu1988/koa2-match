@@ -4,7 +4,7 @@
   "description": "match request or response and change koa2 context.",
   "main": "lib/index.js",
   "scripts": {
-    "test": "mocha",
+    "test": "standard && mocha",
     "build": "babel src -d  lib",
     "push": "nrm use npm && npm version patch && npm publish && nrm use taobao"
   },
@@ -31,7 +31,7 @@
     "chai": "^3.5.0",
     "eslint": "~2.2.0",
     "eslint-config-standard": "^5.1.0",
-    "eslint-plugin-babel": "^3.1.0",
+    "eslint-plugin-babel": "^3.3.0",
     "eslint-plugin-promise": "^1.1.0",
     "eslint-plugin-standard": "^1.3.1",
     "istanbul": "^0.4.0",
