@@ -21,14 +21,14 @@ match.match('test_plain_mixin', {
 })
 
 // 一次添加多个匹配规则
-match.match([
+match.matchs([
   {
-    rule: /test_arr/,
-    callback: function (ctx) {
+    condition: /test_arr/,
+    handle: function (ctx) {
       ctx.response.body = 'test_arr'
     }
   },
-  {rule: /test_plain2/, callback: {body: 'test2'}}
+  {condition: /test_plain2/, handle: {body: 'test2'}}
 ])
 
 // promise
@@ -62,7 +62,7 @@ match.match('test_promise_chain', function (ctx) {
   })
 })
 
-match.match(function (ctx) {
+match.match({phase: 'response'}, function (ctx) {
   console.log('url:', ctx.url)
   if (!ctx.response.body) ctx.response.body = 'not_found'
 })

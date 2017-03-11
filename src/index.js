@@ -11,28 +11,23 @@ const rules = []
 /**
  * 增加匹配规则和回调
  * */
-function match (rule, callback) {
-  if (_.isArray(rule)) {
-    rule.forEach(r => match(r.rule, r.callback))
-  } else if (arguments.length === 1) {
-    callback = rule
-    rule = /\*/g
-    rules.push({rule, callback, id: uuid()})
-  } else if (_.isString(rule) || _.isRegExp(rule)) {
-    rule = {url: rule}
-    rules.push({rule, callback, id: uuid()})
-  } else if (rule && callback) {
-    rules.push({rule, callback, id: uuid()})
+function add (condition, handle) {
+  if (!condition) return
+  if (arguments.length === 1) {
+    handle = condition
+    condition = /\*/g
+    rules.push({condition, handle, id: uuid()})
+  } else if (condition && handle) {
+    rules.push({condition, handle, id: uuid()})
   } else {
-    console.log('unkonw rule', rule, callback)
+    throw new Error('Can not add match rule:', condition, handle)
   }
 }
 
-function setRules (_rules) {
-  clean()
+function adds (_rules) {
   if (_.isArray(_rules)) {
     _rules.forEach(function (r) {
-      if (r && r.rule && r.callback) {
+      if (r && r.condition && r.handle) {
         r.id = r.id || uuid()
         rules.push(r)
       }
@@ -123,10 +118,10 @@ function callback () {
   return async function (ctx, next) {
     try {
       ctx.phase = 'request'
-      await RunRuleHandle(ctx, rules.filter(r => (!r.rule.phase || r.rule.phase === 'request')))
+      await RunRuleHandle(ctx, rules)
       await next()
       ctx.phase = 'response'
-      await RunRuleHandle(ctx, rules.filter(r => (r.rule.phase === 'response')))
+      await RunRuleHandle(ctx, rules)
       // console.log('ctx:', ctx);
       resetHeader(ctx)
     } catch (e) {
@@ -140,9 +135,9 @@ async function RunRuleHandle (ctx, list, nowIndex) {
   nowIndex = nowIndex || 0
   if (nowIndex >= list.length) return Promise.resolve()
   var r = list[nowIndex]
-  if (isCtxMatchRule(ctx, r.rule)) {
+  if (isCtxMatchRule(ctx, r.condition)) {
     ctx._matchs ? ctx._matchs.push(r.id) : ctx._matchs = [r.id]
-    return await ctxHandle(ctx, r.callback).then(function () {
+    return await ctxHandle(ctx, r.handle).then(function () {
       return RunRuleHandle(ctx, list, nowIndex + 1)
     })
   }
@@ -153,16 +148,33 @@ module.exports.getRules = function () {
   return rules
 }
 module.exports.callback = callback
-module.exports.match = match
+module.exports.add = add
+module.exports.match = add
 module.exports.clean = clean
-module.exports.setRules = setRules
+module.exports.adds = adds
+module.exports.matchs = adds
 
-function isCtxMatchRule (ctx, rule) {
-  if (typeof rule === 'function') return rule(ctx)
-  for (var key in rule) {
+function isCtxMatchRule (ctx, condition) {
+  let phase = condition.phase || 'request'
+  if (_.isArray(condition)) {
+    for (let i = 0; i < condition.length; i++) {
+      condition.forEach(function (con) {
+        if (con && con.phase) phase = con.phase
+      })
+      if (ctx.phase !== phase) return false
+      if (!isCtxMatchRule(ctx, condition[i])) {
+        return false
+      }
+    }
+    return true
+  }
+  if (ctx.phase !== phase) return false
+  if (typeof condition === 'string' || _.isRegExp(condition)) return TestOneRule(GetVal(ctx, 'url'), condition)
+  if (typeof condition === 'function') return condition(ctx)
+  for (let key in condition) {
     if (key === 'phase') continue
-    var condition = rule[key]
-    if (!TestOneRule(GetVal(ctx, key), condition)) {
+    let c = condition[key]
+    if (!TestOneRule(GetVal(ctx, key), c)) {
       return false
     }
   }
@@ -187,13 +199,13 @@ function GetVal (ctx, key) {
       return ctx.get(key) || ctx[key]
   }
 }
-function TestOneRule (val, rule) {
-  if (_.isFunction(rule)) {
-    return rule(val)
-  } else if (_.isRegExp(rule)) {
-    return rule.test(val)
-  } else if (_.isString(rule)) {
-    return (val + '').indexOf(rule) >= 0
+function TestOneRule (val, condition) {
+  if (_.isFunction(condition)) {
+    return condition(val)
+  } else if (_.isRegExp(condition)) {
+    return condition.test(val)
+  } else if (_.isString(condition)) {
+    return (val + '').indexOf(condition) >= 0
   }
   return false
 }

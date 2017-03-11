@@ -28,11 +28,33 @@ app.listen(4000, function(err){
 ```
 
 ## api
-* match(rule,callback) 匹配后执行程序修改请求或者响应
-* getRules()  取得所有的规则列表
-* setRules(rules) 批量设置匹配规则
-* clean() 清空所有匹配规则
-* callback() 生成koa@next的中间件
+* match(condition, callback) 匹配后执行程序修改请求或者响应
+* add(condition, callback) 同match
+* matchs(rules) 批量设置匹配规则
+* adds(rules)  同matchs
+* getRules()  取得所有的规则列表,对其修改则会直接影响callback处理程序
+* clean()     清空所有匹配规则
+* callback()  生成koa@next的中间件
+
+
+* rule 匹配规则，包含属性id, condition, handle
+  - id: 添加rule时自动分配的唯一id
+  - condition: 匹配规则
+  - handle:    匹配condition后的处理
+
+* condition 匹配条件
+  - {string}   url中包含condition
+  - {reg}      condition.test(url)为true
+  - {function} condition(ctx)为true
+  - {object}   循环遍历condition的属性，并取出ctx或者ctx.request对应属性进行判断，例如condition为{host: 'test'},则取出ctx.request.host后使用条件'test'进行判断。 condition的其属性值为string、reg或者function。
+  - {array}    多个匹配条件,只有数组中所有的条件判断都通过时，其判断才通过
+  - phase      condition.phase表示匹配阶段，为空或者'request'匹配请求阶段，当为'response'时匹配响应阶段
+
+
+### handle 处理程序
+* {function} 处理程序,参数ctx
+* {plainObject} 使用对象属性覆盖ctx的属性，例如属性'request.header.host'则将修改ctx.request的header
+
 
 ## build
 ```
