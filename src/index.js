@@ -60,6 +60,11 @@ async function ctxHandle (ctx, handle) {
 
 // 根据plainObject， 修改ctx的属性
 function ctxChangeByPlain (ctx, plainObject) {
+  if(plainObject.attr && plainObject.value) {
+    let p = {}
+    p[plainObject.attr] = plainObject.value
+    plainObject = p
+  }
   for (let attr in plainObject) {
     let val = plainObject[attr]
     attr = (attr + '').trim().toLowerCase()
@@ -147,6 +152,10 @@ async function RunRuleHandle (ctx, list, nowIndex) {
 module.exports.getRules = function () {
   return rules
 }
+module.exports.setRules = function(rules) {
+  clean()
+  adds(rules)
+}
 module.exports.callback = callback
 module.exports.add = add
 module.exports.match = add
@@ -154,12 +163,14 @@ module.exports.clean = clean
 module.exports.adds = adds
 module.exports.matchs = adds
 
+
 function isCtxMatchRule (ctx, condition) {
-  let phase = condition.phase || 'request'
+  let phase = condition.phase || (condition.attr === 'phase' && condition.value) || 'request'
   if (_.isArray(condition)) {
     for (let i = 0; i < condition.length; i++) {
       condition.forEach(function (con) {
         if (con && con.phase) phase = con.phase
+        if (con && con.attr && con.attr === 'phase' && con.value) phase = con.value
       })
       if (ctx.phase !== phase) return false
       if (!isCtxMatchRule(ctx, condition[i])) {
@@ -171,6 +182,13 @@ function isCtxMatchRule (ctx, condition) {
   if (ctx.phase !== phase) return false
   if (typeof condition === 'string' || _.isRegExp(condition)) return TestOneRule(GetVal(ctx, 'url'), condition)
   if (typeof condition === 'function') return condition(ctx)
+  if (condition.attr && condition.value) {
+    if(condition.attr === 'phase') return true
+    if (!TestOneRule(GetVal(ctx, condition.attr), condition.value)) {
+      return false
+    }
+    return true
+  }
   for (let key in condition) {
     if (key === 'phase') continue
     let c = condition[key]
